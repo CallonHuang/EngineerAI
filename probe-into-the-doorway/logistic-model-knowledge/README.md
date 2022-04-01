@@ -85,7 +85,7 @@ C-->D[Inferring]
 
 前一个标题提到的损失函数，其实就是一个二次函数是吧？它画出来也就类似上图这样一个凹函数（神经网络领域一般称之为**凸函数**），所谓梯度就是导数，而梯度下降，指的就是，我们要向损失更小的方向进行移动。如果细抠字眼，你会发现，梯度是导数我能理解，但是梯度下降也就是导数下降，为什么就是向损失最小的方向移动了呢？先上公式：
 
-![](https://latex.codecogs.com/svg.image?w=w-\alpha&space;\frac{\partial&space;loss}{\partial&space;w},b=b-\alpha&space;\frac{\partial&space;loss}{\partial&space;b})
+![](https://latex.codecogs.com/svg.image?\bg{white}w=w-\alpha&space;\frac{\partial&space;loss}{\partial&space;w},b=b-\alpha&space;\frac{\partial&space;loss}{\partial&space;b})
 
 公式中的 *w* 和 *b* 对应之前预测函数中的参数，该公式就是在神经网络训练过程中对 *w* 和 *b* 的调整依据，梯度下降则值的是 *w* 和 *b* 都会减去梯度进行调整，当梯度降为 *0* 时，*w* 和 *b* 将不再调整，所以说它代表的含义是向损失最小的方向移动：
 
@@ -101,7 +101,7 @@ C-->D[Inferring]
 
 所谓反向传播，它也就是前面提到的梯度下降公式：
 
-![](https://latex.codecogs.com/svg.image?w=w-\alpha&space;\frac{\partial&space;loss}{\partial&space;w},b=b-\alpha&space;\frac{\partial&space;loss}{\partial&space;b})
+![](https://latex.codecogs.com/svg.image?\bg{white}w=w-\alpha&space;\frac{\partial&space;loss}{\partial&space;w},b=b-\alpha&space;\frac{\partial&space;loss}{\partial&space;b})
 
 这在线性模型中很好理解，因为我们可以轻易地求得梯度表达式：
 
