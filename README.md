@@ -28,3 +28,4 @@ Including but not limited to the following points：
 
 - [初探门道](./probe-into-the-doorway)
 
+loss=\sum (y-\widehat{y})^{2},\widehat{y}=\frac{1}{1+e^{-out}},out=\theta x
