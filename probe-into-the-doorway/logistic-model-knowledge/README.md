@@ -81,7 +81,7 @@ C-->D[Inferring]
 
 在线性回归中，所谓损失，就在于预测值与训练数据的差异，差异越大，则损失越大。这样的函数实际可以有很多，如简单求差的绝对值的方式，但线性回归中使用的标准损失函数名为 **MSE**（**M**ean **S**quare **E**rror），公式如下：
 
-![loss_MSE](./img-storage/loss_MSE.png)
+![loss_MSE](./img-storage/loss_mse.png)
 
 和求差类似地，它也能得到差异越大则损失越大的结果。
 
