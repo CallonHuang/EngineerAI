@@ -14,8 +14,7 @@
       - [激活函数](#激活函数)
       - [损失函数](#BCE损失函数)
       - [随机梯度下降](#随机梯度下降)
-      - [Batch](#Batch)
-      - [Softmax](#Softmax)      
+      - [Batch](#Batch) 
 
 ## 背景
 
