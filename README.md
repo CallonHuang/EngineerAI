@@ -21,10 +21,12 @@ This note will help you learn AI by my learning steps in engineering application
 Including but not limited to the following points：
 
 - [Basic Knowledges](./probe-into-the-doorway)
+- [Object Detection Knowledges](./object-detection)
 
 这是记录我在工程应用上一步步学习AI知识的一系列文章
 
 包括但不限于以下几个部分：
 
 - [初探门道](./probe-into-the-doorway)
+- [日精月异](./object-detection)
 
