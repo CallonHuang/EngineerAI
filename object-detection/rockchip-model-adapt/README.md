@@ -222,21 +222,23 @@ done
 
 ![out](./img-storage/out.png)
 
-它默认的训练完的模型，是包含 80 个类别，这从
+它默认的训练完的模型，是包含 80 个类别，这从 `models/yolov5s.yaml` ：
 
-```python
-class Detect(nn.Module):
-    stride = None  # strides computed during build
-    onnx_dynamic = False  # ONNX export parameter
+```yaml
+# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 
-    def __init__(self, nc=80, anchors=(), ch=(), inplace=True):  # detection layer
-        super().__init__()
-        self.nc = nc  # number of classes
-        self.no = nc + 5  # number of outputs per anchor
-        ...
+# Parameters
+nc: 80  # number of classes
+depth_multiple: 0.33  # model depth multiple
+width_multiple: 0.50  # layer channel multiple
+anchors:
+  - [10,13, 16,30, 33,23]  # P3/8
+  - [30,61, 62,45, 59,119]  # P4/16
+  - [116,90, 156,198, 373,326]  # P5/32
+...
 ```
 
-`class Detect` 的构造函数可以看出，加上总的 *score* 和 4 个坐标，就是 85 个，这就是最后一个维度的信息，前面的 `(80, 80)`，`(40, 40)` 和 `(20, 20)` 则代表着将图像分割成了多少个块，而统一的这个 3 则代表了每个 *grid cell* 预测的边界框的数量，即之前提到的，包含 *anchor* 的个数。
+可以看出，加上总的 *score* 和 4 个坐标，就是 85 个，这就是最后一个维度的信息，前面的 `(80, 80)`，`(40, 40)` 和 `(20, 20)` 则代表着将图像分割成了多少个块，而统一的这个 3 则代表了每个 *grid cell* 预测的边界框的数量，即之前提到的，包含 *anchor* 的个数。
 
 之前提到过，*anchor* 是通过 *K-means* 聚类得到的，但是 `test.py` 中直接给出了常数项
 
@@ -248,80 +250,7 @@ def yolov5_post_process(input_data):
     ...
 ```
 
-是否正确呢？可以通过
-
-```python
-class Detect(nn.Module):
-    ...
-    def forward(self, x):
-        z = []  # inference output
-        for i in range(self.nl):
-            x[i] = self.m[i](x[i])  # conv
-            bs, _, ny, nx = x[i].shape  # x(bs,255,20,20) to x(bs,3,20,20,85)
-            x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
-
-            if not self.training:  # inference
-                if self.grid[i].shape[2:4] != x[i].shape[2:4] or self.onnx_dynamic:
-                    self.grid[i] = self._make_grid(nx, ny).to(x[i].device)
-
-                y = x[i].sigmoid()
-                print("anchor_grid-----------")
-                print(self.anchor_grid[i])
-                if self.inplace:
-                    y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
-                    y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
-                else:  # for YOLOv5 on AWS Inferentia https://github.com/ultralytics/yolov5/pull/2953
-                    xy = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
-                    wh = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i].view(1, self.na, 1, 1, 2)  # wh
-                    y = torch.cat((xy, wh, y[..., 4:]), -1)
-                z.append(y.view(bs, -1, self.no))
-
-        return x if self.training else (torch.cat(z, 1), x)
-```
-
-在原始的 `class Detect` 的 `forward` 中加上打印就可以得到 *anchor* 的值来比较：
-
-```
-PS D:\learn_pytorch\yolov5\yolov5> python detect.py --source .\data\images\zidane.jpg
-detect: weights=yolov5s.pt, source=.\data\images\zidane.jpg, imgsz=[640, 640], conf_thres=0.25, iou_thres=0.45, max_det=1000, device=, view_img=False, save_txt=False, save_conf=False, save_crop=False, nosave=False, classes=None, agnost
-ic_nms=False, augment=False, visualize=False, update=False, project=runs/detect, name=exp, exist_ok=False, line_thickness=3, hide_labels=False, hide_conf=False, half=False
-requirements: numpy>=1.18.5 not found and is required by YOLOv5, attempting auto-update...
-requirements: 'pip install numpy>=1.18.5' skipped (offline)
-YOLOv5  v5.0-419-gc5360f6 torch 1.10.2 CUDA:0 (NVIDIA GeForce GTX 1050 Ti, 4095.6875MB)
-
-Fusing layers... 
-Model Summary: 224 layers, 7266973 parameters, 0 gradients
-...
-image 1/1 D:\learn_pytorch\yolov5\yolov5\data\images\zidane.jpg: anchor_grid-----------
-tensor([[[[[10., 13.]]],
-
-
-         [[[16., 30.]]],
-
-
-         [[[33., 23.]]]]], device='cuda:0')
-anchor_grid-----------
-tensor([[[[[ 30.,  61.]]],
-
-
-         [[[ 62.,  45.]]],
-
-
-         [[[ 59., 119.]]]]], device='cuda:0')
-anchor_grid-----------
-tensor([[[[[116.,  90.]]],
-
-
-         [[[156., 198.]]],
-
-
-         [[[373., 326.]]]]], device='cuda:0')
-384x640 2 persons, 2 ties, Done. (0.032s)
-Results saved to runs\detect\exp7
-Done. (0.098s)
-```
-
-发现完全一致，因为模型参数已经训练好了，自然自带的 *YOLOv5* 模型的 `anchor` 也是训练好的常数项。
+这也可以通过 `models/yolov5s.yaml` 看到，因为模型参数已经训练好了，自然自带的 *YOLOv5* 模型的 `anchor` 也是训练好的常数项。
 
 再接着分析下一部分：
 
