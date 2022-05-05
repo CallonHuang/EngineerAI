@@ -23,11 +23,19 @@
 #include <stdint.h>
 #define LABEL_NALE_TXT_PATH "./model/coco_80_labels_list.txt"
 
-static char *labels[OBJ_CLASS_NUM];
 
-const int anchor0[6] = {10, 13, 16, 30, 33, 23};
-const int anchor1[6] = {30, 61, 62, 45, 59, 119};
-const int anchor2[6] = {116, 90, 156, 198, 373, 326};
+static const int strides[] = {8, 16, 32};
+static const int anchors[] = {10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326};
+static const char *labels[] = {
+	"person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light", 
+	"fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow",
+	"elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee",
+	"skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard",
+	"tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich",
+	"orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed",
+	"dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven",
+	"toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"
+};
 
 inline static int clamp(float val, int min, int max)
 {
@@ -84,13 +92,6 @@ int readLines(const char *fileName, char *lines[], int max_line)
             break;
     }
     return i;
-}
-
-int loadLabelName(const char *locationFilename, char *label[])
-{
-    printf("loadLabelName %s\n", locationFilename);
-    readLines(locationFilename, label, OBJ_CLASS_NUM);
-    return 0;
 }
 
 static float CalculateOverlap(float xmin0, float ymin0, float xmax0, float ymax0, float xmin1, float ymin1, float xmax1, float ymax1)
@@ -167,12 +168,14 @@ static float deqnt_affine_to_f32(uint8_t qnt, uint32_t zp, float scale)
     return ((float)qnt - (float)zp) * scale;
 }
 
-static int process(uint8_t *input, int *anchor, int grid_h, int grid_w, int height, int width, int stride,
+static int process(uint8_t *input, int *anchor, int index, int height, int width,
                    std::vector<float> &boxes, std::vector<prob_with_idx_t> &objProbs, std::vector<int> &classId,
                    float threshold, uint32_t zp, float scale)
 {
 
     int validCount = 0;
+	int grid_h = height / strides[index];
+	int grid_w = width / strides[index];
     int grid_len = grid_h * grid_w;
     float thres = unsigmoid(threshold);
     uint8_t thres_u8 = qnt_f32_to_affine(thres, zp, scale);
@@ -191,8 +194,8 @@ static int process(uint8_t *input, int *anchor, int grid_h, int grid_w, int heig
                     float box_y = sigmoid(deqnt_affine_to_f32(in_ptr[grid_len], zp, scale)) * 2.0 - 0.5;
                     float box_w = sigmoid(deqnt_affine_to_f32(in_ptr[2 * grid_len], zp, scale)) * 2.0;
                     float box_h = sigmoid(deqnt_affine_to_f32(in_ptr[3 * grid_len], zp, scale)) * 2.0;
-                    box_x = (box_x + j) * (float)stride;
-                    box_y = (box_y + i) * (float)stride;
+                    box_x = (box_x + j) * (float)strides[index];
+                    box_y = (box_y + i) * (float)strides[index];
                     box_w = box_w * box_w * (float)anchor[a * 2];
                     box_h = box_h * box_h * (float)anchor[a * 2 + 1];
                     box_x -= (box_w / 2.0);
@@ -236,49 +239,16 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
                  std::vector<uint32_t> &qnt_zps, std::vector<float> &qnt_scales,
                  detect_result_group_t *group)
 {
-    static int init = -1;
-    if (init == -1)
-    {
-        int ret = 0;
-        ret = loadLabelName(LABEL_NALE_TXT_PATH, labels);
-        if (ret < 0)
-        {
-            return -1;
-        }
-
-        init = 0;
-    }
     memset(group, 0, sizeof(detect_result_group_t));
 
     std::vector<float> filterBoxes;
     std::vector<prob_with_idx_t> objProbs;
     std::vector<int> classId;
-
-    // stride 8
-    int stride0 = 8;
-    int grid_h0 = model_in_h / stride0;
-    int grid_w0 = model_in_w / stride0;
-    int validCount0 = 0;
-    validCount0 = process(input0, (int *)anchor0, grid_h0, grid_w0, model_in_h, model_in_w,
-                          stride0, filterBoxes, objProbs, classId, conf_threshold, qnt_zps[0], qnt_scales[0]);
-
-    // stride 16
-    int stride1 = 16;
-    int grid_h1 = model_in_h / stride1;
-    int grid_w1 = model_in_w / stride1;
-    int validCount1 = 0;
-    validCount1 = process(input1, (int *)anchor1, grid_h1, grid_w1, model_in_h, model_in_w,
-                          stride1, filterBoxes, objProbs, classId, conf_threshold, qnt_zps[1], qnt_scales[1]);
-
-    // stride 32
-    int stride2 = 32;
-    int grid_h2 = model_in_h / stride2;
-    int grid_w2 = model_in_w / stride2;
-    int validCount2 = 0;
-    validCount2 = process(input2, (int *)anchor2, grid_h2, grid_w2, model_in_h, model_in_w,
-                          stride2, filterBoxes, objProbs, classId, conf_threshold, qnt_zps[2], qnt_scales[2]);
-
-    int validCount = validCount0 + validCount1 + validCount2;
+    int validCount = 0;
+    uint8_t *input[] = {input0, input1, input2};
+    for (int i = 0; i < 3; i++)
+        validCount += process(input[i], (int *)&anchors[i * 6], i, model_in_h, model_in_w,
+                          filterBoxes, objProbs, classId, conf_threshold, qnt_zps[i], qnt_scales[i]);
     // no object detect
     if (validCount <= 0)
     {
@@ -318,8 +288,7 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
         group->results[last_count].box.right = (int)(x2 / scale_w);
         group->results[last_count].box.bottom = (int)(y2 / scale_h);
         group->results[last_count].prop = obj_conf;
-        char *label = labels[id];
-        strncpy(group->results[last_count].name, label, OBJ_NAME_MAX_SIZE);
+        strncpy(group->results[last_count].name, labels[id], OBJ_NAME_MAX_SIZE);
 
         // printf("result %2d: (%4d, %4d, %4d, %4d), %s\n", i, group->results[last_count].box.left, group->results[last_count].box.top,
         //        group->results[last_count].box.right, group->results[last_count].box.bottom, label);
