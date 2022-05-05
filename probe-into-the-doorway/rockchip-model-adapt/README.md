@@ -255,7 +255,7 @@ $ make
 接下来则参考RK给的 `demo` 进行 *C++* 程序编写即可，源码以 `demo_rknn.cpp` 的方式直接给出了，编译如下（依赖 [`librknn_api.so`](https://github.com/rockchip-linux/RKNPUTools) 和前面 *opencv* 相关的三个库）:
 
 ```shell
-$ /opt/rockchip-linux-toolchain/bin/arm-linux-gnueabihf-g++ -I~/rksdk/external/rknpu/rknn/rknn_api/librknn_api/include -I~/opencv-4.5.5/modules/core/include -I~/opencv-4.5.5/modules/imgcodecs/include -I~/opencv-4.5.5/build -L~/rksdk/external/rknpu/rknn/rknn_api/librknn_api/lib -L~/opencv-4.5.5/build/lib demo_rknn.cpp -o test -lopencv_imgcodecs -lopencv_imgproc -lopencv_core -lrknn_api -ldl
+$ /opt/rockchip-linux-toolchain/bin/arm-linux-gnueabihf-g++ -I/home/callon/rksdk/external/rknpu/rknn/rknn_api/librknn_api/include -I/home/callon/opencv-4.5.5/modules/core/include -I/home/callon/opencv-4.5.5/modules/imgcodecs/include -I/home/callon/opencv-4.5.5/modules/core/include -I/home/callon/opencv-4.5.5/build -L~/rksdk/external/rknpu/rknn/rknn_api/librknn_api/lib -L~/opencv-4.5.5/build/lib demo_rknn.cpp -o test -lopencv_imgcodecs -lopencv_imgproc -lopencv_core -lrknn_api -ldl
 ```
 
 编译完成后，将 *test*，*logistic_pre_compile.rknn*，*8.png* 和 *opencv* 相关的三个库拷贝至设备端，直接执行即可：
