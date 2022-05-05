@@ -102,18 +102,18 @@ static float CalculateOverlap(float xmin0, float ymin0, float xmax0, float ymax0
     return u <= 0.f ? 0.f : (i / u);
 }
 
-static int nms(int validCount, std::vector<float> &outputLocations, std::vector<int> classIds, std::vector<int> &order, int filterId, float threshold)
+static int nms(int validCount, std::vector<float> &outputLocations, std::vector<int> classIds, std::vector<prob_with_idx_t> &objProbs, int filterId, float threshold)
 {
     for (int i = 0; i < validCount; ++i)
     {
-        if (order[i] == -1 || classIds[i] != filterId)
+		int n = objProbs[i].index;
+        if (n == -1 || classIds[i] != filterId)
         {
             continue;
         }
-        int n = order[i];
         for (int j = i + 1; j < validCount; ++j)
         {
-            int m = order[j];
+            int m = objProbs[j].index;
             if (m == -1 || classIds[i] != filterId)
             {
                 continue;
@@ -132,48 +132,11 @@ static int nms(int validCount, std::vector<float> &outputLocations, std::vector<
 
             if (iou > threshold)
             {
-                order[j] = -1;
+                objProbs[j].index = -1;
             }
         }
     }
     return 0;
-}
-
-static int quick_sort_indice_inverse(
-    std::vector<float> &input,
-    int left,
-    int right,
-    std::vector<int> &indices)
-{
-    float key;
-    int key_index;
-    int low = left;
-    int high = right;
-    if (left < right)
-    {
-        key_index = indices[left];
-        key = input[left];
-        while (low < high)
-        {
-            while (low < high && input[high] <= key)
-            {
-                high--;
-            }
-            input[low] = input[high];
-            indices[low] = indices[high];
-            while (low < high && input[low] >= key)
-            {
-                low++;
-            }
-            input[high] = input[low];
-            indices[high] = indices[low];
-        }
-        input[low] = key;
-        indices[low] = key_index;
-        quick_sort_indice_inverse(input, left, low - 1, indices);
-        quick_sort_indice_inverse(input, low + 1, right, indices);
-    }
-    return low;
 }
 
 static float sigmoid(float x)
@@ -205,7 +168,7 @@ static float deqnt_affine_to_f32(uint8_t qnt, uint32_t zp, float scale)
 }
 
 static int process(uint8_t *input, int *anchor, int grid_h, int grid_w, int height, int width, int stride,
-                   std::vector<float> &boxes, std::vector<float> &objProbs, std::vector<int> &classId,
+                   std::vector<float> &boxes, std::vector<prob_with_idx_t> &objProbs, std::vector<int> &classId,
                    float threshold, uint32_t zp, float scale)
 {
 
@@ -250,7 +213,10 @@ static int process(uint8_t *input, int *anchor, int grid_h, int grid_w, int heig
                             maxClassProbs = prob;
                         }
                     }
-                    objProbs.push_back(sigmoid(deqnt_affine_to_f32(maxClassProbs, zp, scale)));
+					prob_with_idx_t p;
+					p.score = sigmoid(deqnt_affine_to_f32(maxClassProbs, zp, scale));
+					p.index = validCount;
+                    objProbs.push_back(p);
                     classId.push_back(maxClassId);
                     validCount++;
                 }
@@ -258,6 +224,11 @@ static int process(uint8_t *input, int *anchor, int grid_h, int grid_w, int heig
         }
     }
     return validCount;
+}
+
+static int cmp(const void *x, const void *y)
+{
+	return ((prob_with_idx_t *)x)->score > ((prob_with_idx_t *)y)->score ? 1 : 0;
 }
 
 int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in_h, int model_in_w,
@@ -280,7 +251,7 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
     memset(group, 0, sizeof(detect_result_group_t));
 
     std::vector<float> filterBoxes;
-    std::vector<float> objProbs;
+    std::vector<prob_with_idx_t> objProbs;
     std::vector<int> classId;
 
     // stride 8
@@ -314,19 +285,13 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
         return 0;
     }
 
-    std::vector<int> indexArray;
-    for (int i = 0; i < validCount; ++i)
-    {
-        indexArray.push_back(i);
-    }
-
-    quick_sort_indice_inverse(objProbs, 0, validCount - 1, indexArray);
+	qsort(&objProbs[0], objProbs.size(), sizeof(prob_with_idx_t), cmp);
 
     std::set<int> class_set(std::begin(classId), std::end(classId));
 
     for (auto c : class_set)
     {
-        nms(validCount, filterBoxes, classId, indexArray, c, nms_threshold);
+        nms(validCount, filterBoxes, classId, objProbs, c, nms_threshold);
     }
 
     int last_count = 0;
@@ -335,18 +300,18 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
     for (int i = 0; i < validCount; ++i)
     {
 
-        if (indexArray[i] == -1 || i >= OBJ_NUMB_MAX_SIZE)
+        if (objProbs[i].index == -1 || i >= OBJ_NUMB_MAX_SIZE)
         {
             continue;
         }
-        int n = indexArray[i];
+        int n = objProbs[i].index;
 
         float x1 = filterBoxes[n * 4 + 0];
         float y1 = filterBoxes[n * 4 + 1];
         float x2 = x1 + filterBoxes[n * 4 + 2];
         float y2 = y1 + filterBoxes[n * 4 + 3];
         int id = classId[n];
-        float obj_conf = objProbs[i];
+        float obj_conf = objProbs[i].score;
 
         group->results[last_count].box.left = (int)(x1 / scale_w);
         group->results[last_count].box.top = (int)(y1 / scale_h);
