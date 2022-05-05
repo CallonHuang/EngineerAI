@@ -6,7 +6,7 @@
 - [模型转换及模拟器使用](#模型转换及模拟器使用)
 - [设备运行](#设备运行)
   - [后处理分析](#后处理分析)
-  - [Demo代码编写](#Demo代码编写)
+  - [Demo代码运行](#Demo代码运行)
 
 ## 模型准备
 
@@ -413,5 +413,56 @@ def yolov5_post_process(input_data):
 
 这样，再来使用 *opencv* 的函数绘制边界框、物体类别及 *score* 就很简单了。
 
-### Demo代码编写
+### Demo代码运行
 
+这里可以直接参考 [RK自带的 *YOLOv5* 集成程序](https://github.com/rockchip-linux/rknpu/blob/master/rknn/rknn_api/examples/rknn_yolov5_demo)，源码已附在当前目录下，和 *logistic* 的 *demo* 一样，这里使用了 *OpenCV* 包装了输入和输出，编译方式如下：
+
+```shell
+$ /opt/rockchip-linux-toolchain/bin/arm-linux-gnueabihf-g++ -I/home/callon/rksdk/external/rknpu/rknn/rknn_api/librknn_api/include -I/home/callon/opencv-4.5.5/modules/imgcodecs/include -I/home/callon/opencv-4.5.5/modules/core/include -I/home/callon/opencv-4.5.5/modules/imgproc/include -I/home/callon/opencv-4.5.5/build -L/home/callon/rksdk/external/rknpu/rknn/rknn_api/librknn_api/lib -L/home/callon/opencv-4.5.5/build/lib main.cc postprocess.cc -o test -lopencv_imgcodecs -lopencv_imgproc -lopencv_core -lrknn_api -ldl
+```
+
+和自带程序相比，该版本支持不同分辨率的图像作为输入且支持非 *bmp* 图像：
+
+```shell
+[root@RV1126_RV1109:/userdata]# ./test yolov5s_pre_compile.rknn bus.jpg
+post process config: box_conf_threshold = 0.50, nms_threshold = 0.60
+Loading mode...
+librknn_runtime version 1.7.0 (0bef7b3 build: 2021-08-18 19:54:13 base: 1131)
+sdk version: librknn_runtime version 1.7.0 (0bef7b3 build: 2021-08-18 19:54:13 base: 1131) driver version: 6.4.6.5.351518
+model input num: 1, output num: 3
+  index=0, name=x.22_0, n_dims=4, dims=[1, 3, 640, 640], n_elems=1228800, size=1228800, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=0, scale=0.003922
+  index=0, name=convolution_at_1168_212_out0_215, n_dims=4, dims=[1, 255, 80, 80], n_elems=1632000, size=1632000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=210, scale=0.092896
+  index=1, name=convolution_at_1179_213_out0_216, n_dims=4, dims=[1, 255, 40, 40], n_elems=408000, size=408000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=182, scale=0.086178
+  index=2, name=convolution_at_1190_214_out0_217, n_dims=4, dims=[1, 255, 20, 20], n_elems=102000, size=102000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=179, scale=0.075776
+model is NCHW input fmt
+model input height=640, width=640, channel=3
+cols: 640, rows: 640
+shrink-cols: 640, rows: 640
+once run use 110.510000 ms
+loadLabelName ./model/coco_80_labels_list.txt
+person @ (478 261 559 520) 0.998151
+person @ (110 243 220 521) 0.996343
+bus @ (87 138 549 440) 0.977877
+person @ (209 245 287 507) 0.968013
+person @ (78 329 125 520) 0.953956
+[root@RV1126_RV1109:/userdata]#
+[root@RV1126_RV1109:/userdata]# ./test yolov5s_pre_compile.rknn zidane.jpg
+post process config: box_conf_threshold = 0.50, nms_threshold = 0.60
+Loading mode...
+librknn_runtime version 1.7.0 (0bef7b3 build: 2021-08-18 19:54:13 base: 1131)
+sdk version: librknn_runtime version 1.7.0 (0bef7b3 build: 2021-08-18 19:54:13 base: 1131) driver version: 6.4.6.5.351518
+model input num: 1, output num: 3
+  index=0, name=x.22_0, n_dims=4, dims=[1, 3, 640, 640], n_elems=1228800, size=1228800, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=0, scale=0.003922
+  index=0, name=convolution_at_1168_212_out0_215, n_dims=4, dims=[1, 255, 80, 80], n_elems=1632000, size=1632000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=210, scale=0.092896
+  index=1, name=convolution_at_1179_213_out0_216, n_dims=4, dims=[1, 255, 40, 40], n_elems=408000, size=408000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=182, scale=0.086178
+  index=2, name=convolution_at_1190_214_out0_217, n_dims=4, dims=[1, 255, 20, 20], n_elems=102000, size=102000, fmt=NCHW, type=UINT8, qnt_type=AFFINE, zp=179, scale=0.075776
+model is NCHW input fmt
+model input height=640, width=640, channel=3
+cols: 1280, rows: 720
+shrink-cols: 640, rows: 640
+once run use 109.131000 ms
+loadLabelName ./model/coco_80_labels_list.txt
+person @ (54 196 1171 713) 0.990266
+```
+
+至此，就完成了 *YOLOv5* 模型在设备上的运行。
