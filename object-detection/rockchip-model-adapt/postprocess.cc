@@ -37,63 +37,6 @@ static const char *labels[] = {
 	"toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"
 };
 
-inline static int clamp(float val, int min, int max)
-{
-    return val > min ? (val < max ? val : max) : min;
-}
-
-char *readLine(FILE *fp, char *buffer, int *len)
-{
-    int ch;
-    int i = 0;
-    size_t buff_len = 0;
-
-    buffer = (char *)malloc(buff_len + 1);
-    if (!buffer)
-        return NULL; // Out of memory
-
-    while ((ch = fgetc(fp)) != '\n' && ch != EOF)
-    {
-        buff_len++;
-        void *tmp = realloc(buffer, buff_len + 1);
-        if (tmp == NULL)
-        {
-            free(buffer);
-            return NULL; // Out of memory
-        }
-        buffer = (char *)tmp;
-
-        buffer[i] = (char)ch;
-        i++;
-    }
-    buffer[i] = '\0';
-
-    *len = buff_len;
-
-    // Detect end
-    if (ch == EOF && (i == 0 || ferror(fp)))
-    {
-        free(buffer);
-        return NULL;
-    }
-    return buffer;
-}
-
-int readLines(const char *fileName, char *lines[], int max_line)
-{
-    FILE *file = fopen(fileName, "r");
-    char *s;
-    int i = 0;
-    int n = 0;
-    while ((s = readLine(file, s, &n)) != NULL)
-    {
-        lines[i++] = s;
-        if (i >= max_line)
-            break;
-    }
-    return i;
-}
-
 static float CalculateOverlap(float xmin0, float ymin0, float xmax0, float ymax0, float xmin1, float ymin1, float xmax1, float ymax1)
 {
     float w = fmax(0.f, fmin(xmax0, xmax1) - fmax(xmin0, xmin1) + 1.0);
