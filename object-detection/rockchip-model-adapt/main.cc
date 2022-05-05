@@ -267,23 +267,23 @@ int main(int argc, char **argv)
     inputs[0].size = width * height * channel;
     inputs[0].fmt = RKNN_TENSOR_NHWC;
     inputs[0].pass_through = 0;
-	// Load image
-	Mat image, ori_image;
-	image = ori_image = imread(image_name, 0);
-	img_width = image.cols;
-	img_height = image.rows;
-	printf("cols: %d, rows: %d\n", image.cols, image.rows);
-	if (640 != image.cols || 640 != image.rows) {
-		Size dsize = Size(640, 640);
-		resize(image, image, dsize, 0, 0, 0);
-	}
-	cvtColor(image, image, COLOR_BGR2RGB);
-	imwrite("./in.bmp", image);
-	// int image_size = image.cols * image.rows * channel;
-	printf("shrink-cols: %d, rows: %d\n", image.cols, image.rows);
-	unsigned char* resize_buf = (unsigned char*)malloc(image.cols * image.rows * channel);
-	memcpy(resize_buf, image.data, image.cols * image.rows * channel);
-	inputs[0].buf = resize_buf;
+    // Load image
+    Mat image, ori_image;
+    image = ori_image = imread(image_name, 0);
+    img_width = image.cols;
+    img_height = image.rows;
+    printf("cols: %d, rows: %d\n", image.cols, image.rows);
+    if (640 != image.cols || 640 != image.rows) {
+    	Size dsize = Size(640, 640);
+    	resize(image, image, dsize, 0, 0, 0);
+    }
+    cvtColor(image, image, COLOR_BGR2RGB);
+    imwrite("./in.bmp", image);
+    // int image_size = image.cols * image.rows * channel;
+    printf("shrink-cols: %d, rows: %d\n", image.cols, image.rows);
+    unsigned char* resize_buf = (unsigned char*)malloc(image.cols * image.rows * channel);
+    memcpy(resize_buf, image.data, image.cols * image.rows * channel);
+    inputs[0].buf = resize_buf;
 	
     gettimeofday(&start_time, NULL);
     rknn_inputs_set(ctx, io_num.n_input, inputs);
@@ -330,8 +330,8 @@ int main(int argc, char **argv)
         int y1 = det_result->box.top;
         int x2 = det_result->box.right;
         int y2 = det_result->box.bottom;
-		rectangle(ori_image, Point(x1,y1), Point(x2,y2), Scalar(255, 0, 0));
-		putText(ori_image, text, Point(x1, y1 - 12), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
+        rectangle(ori_image, Point(x1,y1), Point(x2,y2), Scalar(255, 0, 0));
+        putText(ori_image, text, Point(x1, y1 - 12), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
     }
     imwrite("./out.bmp", ori_image);
     ret = rknn_outputs_release(ctx, io_num.n_output, outputs);
