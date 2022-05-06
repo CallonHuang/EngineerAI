@@ -415,13 +415,21 @@ def yolov5_post_process(input_data):
 
 ### Demo代码运行
 
-这里可以直接参考 [RK自带的 *YOLOv5* 集成程序](https://github.com/rockchip-linux/rknpu/blob/master/rknn/rknn_api/examples/rknn_yolov5_demo)，源码已附在当前目录下，和 *logistic* 的 *demo* 一样，这里使用了 *OpenCV* 包装了输入和输出，编译方式如下：
+这里可以直接参考 [RK自带的 *YOLOv5* 集成程序](https://github.com/rockchip-linux/rknpu/blob/master/rknn/rknn_api/examples/rknn_yolov5_demo)，源码（自行修改了部分逻辑）已附在当前目录下。
+
+有一点需要注意：
+
+C++ 程序取 `output` 的 *Tensor* 时，维度是 *(1, 255, 80/40/20, 80/40/20)* ，所以内存保存的形式如下：
+
+<img src="./img-storage/memory_out.jpg" alt="memory_out" style="zoom: 67%;" />
+
+和 *logistic* 的 *demo* 一样，这里使用了 *OpenCV* 包装了输入和输出，编译方式如下：
 
 ```shell
 $ /opt/rockchip-linux-toolchain/bin/arm-linux-gnueabihf-g++ -I/home/callon/rksdk/external/rknpu/rknn/rknn_api/librknn_api/include -I/home/callon/opencv-4.5.5/modules/imgcodecs/include -I/home/callon/opencv-4.5.5/modules/core/include -I/home/callon/opencv-4.5.5/modules/imgproc/include -I/home/callon/opencv-4.5.5/build -L/home/callon/rksdk/external/rknpu/rknn/rknn_api/librknn_api/lib -L/home/callon/opencv-4.5.5/build/lib main.cc postprocess.cc -o test -lopencv_imgcodecs -lopencv_imgproc -lopencv_core -lrknn_api -ldl
 ```
 
-和自带程序相比，该版本支持不同分辨率的图像作为输入且支持非 *bmp* 图像：
+和自带程序相比，该版本支持不同分辨率的图像作为输入且支持非 *bmp* 图像，并且处理部分更加简洁易懂一些：
 
 ```shell
 [root@RV1126_RV1109:/userdata]# ./test yolov5s_pre_compile.rknn bus.jpg
