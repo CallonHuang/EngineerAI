@@ -116,6 +116,28 @@
 
 这里需要注意的是，并没有完全补到 640 * 640，以免进行不必要的计算。
 
+> 对于卷积的网络，输入更小是能够节省运算的，如对于 *YOLOv5* 而言，640 x 640的图像输入可以得到 1 * 3 ([anchors](Anchor-boxes)) * 85 * ( 80 * 80 + 40 * 40 + 20 * 20) 的输出，但是如果你送入非这么大分辨率的图像依然可以得到截取版的输出：
+>
+> ```
+> D:\ProgramData\Anaconda3\envs\pytorch\python.exe D:/learn_pytorch/yolov5/yolov5/detect.py
+> detect: weights=yolov5s.pt, source=data/images, imgsz=[640, 640], conf_thres=0.25, iou_thres=0.45, max_det=1000, device=, view_img=False, save_txt=False, save_conf=False, save_crop=False, nosave=False, classes=None, agnostic_nms=False, augment=False, visualize=False, update=False, project=runs/detect, name=exp, exist_ok=False, line_thickness=3, hide_labels=False, hide_conf=False, half=False
+> YOLOv5  v5.0-419-gc5360f6 torch 1.10.2 CUDA:0 (NVIDIA GeForce GTX 1050 Ti, 4095.6875MB)
+> 
+> Fusing layers... 
+> Model Summary: 224 layers, 7266973 parameters, 0 gradients
+> image 1/2 D:\learn_pytorch\yolov5\yolov5\data\images\bus.jpg: torch.Size([1, 3, 640, 480])
+> torch.Size([1, 18900, 85])
+> 640x480 4 persons, 1 bus, 1 fire hydrant, Done. (0.041s)
+> image 2/2 D:\learn_pytorch\yolov5\yolov5\data\images\zidane.jpg: torch.Size([1, 3, 384, 640])
+> torch.Size([1, 15120, 85])
+> 384x640 2 persons, 2 ties, Done. (0.038s)
+> Results saved to runs\detect\exp14
+> Done. (0.528s)
+> 
+> Process finished with exit code 0
+> ```
+> 即输出（1 * 18900 * 85 和 1 * 15120 * 85）会对应裁剪为原来的 0.75（480/640）倍和0.6（384/640）倍。
+
 ### 网络输出
 
 一般放的深度学习网络，输出都是一个 *softmax* 层，代表着各个分类的概率，但是由于目标检测中目标定位的存在，输出则可能变为如下的情况（这里用三个类别的单目标识别网络举例）：
@@ -180,7 +202,7 @@
 
 假设此时滑块就是 14 * 14 * 3 的大小，步长为 2，在 16 * 16 * 3 的原始图上进行滑动，那么会得到四个滑动的结果，每个滑动结果的卷积操作，最终可得到 2 * 2 * 4 的预测结果，到这里看似没有计算量的减少，但是实际上这种情况不需要依靠连续的卷积操作来识别图片中的汽车，而是可以对整张图片进行卷积操作，一次得到所有的预测值。
 
-> 也就是说，以前只支持 14 * 14 * 3 的输入得到一个结果，现在扩充网络支持 28 * 28 * 3 的输入得到 8 * 8 个结果。
+> 和 *YOLOv5* 支持输入小于 640 x 640 的图像一样，对于纯卷积的网络，虽然以前网络只支持 14 * 14 * 3 的输入得到一个结果，但现在输入 28 * 28 * 3 ，依然可以得到 8 * 8 个结果。
 
 ### 边界框预测
 
