@@ -194,7 +194,7 @@ Optimizer stripped from runs\train\exp6\weights\best.pt, 14.4MB
 
 经过漫长的等待，得到位于 `runs\train\exp6` 中的结果：
 
-![train_result](./img-storage/train_result.png)
+![train_result](./img-storage/train_result.PNG)
 
 ## 模型测试
 
@@ -213,7 +213,7 @@ orgimg.shape:  (700, 511, 3)
 
 得到结果（原图和最终的 `result.jpg` ）：
 
-![train_result](./img-storage/test_result.png)
+![train_result](./img-storage/test_result.PNG)
 
 证明训练的权重效果不错。
 
