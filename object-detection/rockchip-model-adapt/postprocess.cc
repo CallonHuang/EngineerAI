@@ -177,8 +177,8 @@ static int cmp(const void *x, const void *y)
 	return ((prob_with_idx_t *)x)->score > ((prob_with_idx_t *)y)->score ? 1 : 0;
 }
 
-int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in_h, int model_in_w,
-                 float conf_threshold, float nms_threshold, float scale_w, float scale_h,
+int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, 
+                 int model_in_h, int model_in_w, float conf_threshold, float nms_threshold, 
                  std::vector<uint32_t> &qnt_zps, std::vector<float> &qnt_scales,
                  detect_result_group_t *group)
 {
@@ -226,10 +226,10 @@ int post_process(uint8_t *input0, uint8_t *input1, uint8_t *input2, int model_in
         int id = classId[n];
         float obj_conf = objProbs[i].score;
 
-        group->results[last_count].box.left = (int)(x1 / scale_w);
-        group->results[last_count].box.top = (int)(y1 / scale_h);
-        group->results[last_count].box.right = (int)(x2 / scale_w);
-        group->results[last_count].box.bottom = (int)(y2 / scale_h);
+        group->results[last_count].box.left = (int)x1;
+        group->results[last_count].box.top = (int)y1;
+        group->results[last_count].box.right = (int)x2;
+        group->results[last_count].box.bottom = (int)y2;
         group->results[last_count].prop = obj_conf;
         strncpy(group->results[last_count].name, labels[id], OBJ_NAME_MAX_SIZE);
 

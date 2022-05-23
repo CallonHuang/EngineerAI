@@ -145,6 +145,16 @@ static int saveFloat(const char *file_name, float *output, int element_size)
     return 0;
 }
 
+static void letter_box(Mat& image, int dest_w, int dest_h)
+{
+	float r = std::min((float)dest_w / (float)image.cols, (float)dest_h / (float)image.rows);
+	int real_w = (int)(image.cols * r);
+	int real_h = (int)(image.rows * r);
+	Size dsize = Size(real_w, real_h);
+	resize(image, image, dsize, 0, 0, 0);
+	copyMakeBorder(image, image, (dest_h - real_h) / 2, (dest_h - real_h) / 2, (dest_w - real_w) / 2, (dest_w - real_w) / 2, BORDER_CONSTANT, Scalar(0));
+}
+
 /*-------------------------------------------
                   Main Functions
 -------------------------------------------*/
@@ -267,23 +277,24 @@ int main(int argc, char **argv)
     inputs[0].size = width * height * channel;
     inputs[0].fmt = RKNN_TENSOR_NHWC;
     inputs[0].pass_through = 0;
-    // Load image
-    Mat image, ori_image;
-    image = ori_image = imread(image_name, 0);
-    img_width = image.cols;
-    img_height = image.rows;
-    printf("cols: %d, rows: %d\n", image.cols, image.rows);
-    if (640 != image.cols || 640 != image.rows) {
-    	Size dsize = Size(640, 640);
-    	resize(image, image, dsize, 0, 0, 0);
-    }
-    cvtColor(image, image, COLOR_BGR2RGB);
-    imwrite("./in.bmp", image);
-    // int image_size = image.cols * image.rows * channel;
-    printf("shrink-cols: %d, rows: %d\n", image.cols, image.rows);
-    unsigned char* resize_buf = (unsigned char*)malloc(image.cols * image.rows * channel);
-    memcpy(resize_buf, image.data, image.cols * image.rows * channel);
-    inputs[0].buf = resize_buf;
+	// Load image
+	Mat image, ori_image;
+	image = ori_image = imread(image_name, 0);
+	img_width = image.cols;
+	img_height = image.rows;
+	printf("cols: %d, rows: %d\n", image.cols, image.rows);
+	if (640 != image.cols || 640 != image.rows) {
+		// Size dsize = Size(640, 640);
+		// resize(image, image, dsize, 0, 0, 0);
+		letter_box(image, 640, 640);
+	}
+	cvtColor(image, image, COLOR_BGR2RGB);
+	imwrite("./in.bmp", image);
+	// int image_size = image.cols * image.rows * channel;
+	printf("shrink-cols: %d, rows: %d\n", image.cols, image.rows);
+	unsigned char* resize_buf = (unsigned char*)malloc(image.cols * image.rows * channel);
+	memcpy(resize_buf, image.data, image.cols * image.rows * channel);
+	inputs[0].buf = resize_buf;
 	
     gettimeofday(&start_time, NULL);
     rknn_inputs_set(ctx, io_num.n_input, inputs);
@@ -302,9 +313,6 @@ int main(int argc, char **argv)
            (__get_us(stop_time) - __get_us(start_time)) / 1000);
 
     //post process
-    float scale_w = (float)width / img_width;
-    float scale_h = (float)height / img_height;
-
     detect_result_group_t detect_result_group;
     std::vector<float> out_scales;
     std::vector<uint32_t> out_zps;
@@ -314,7 +322,7 @@ int main(int argc, char **argv)
         out_zps.push_back(output_attrs[i].zp);
     }
     post_process((uint8_t *)outputs[0].buf, (uint8_t *)outputs[1].buf, (uint8_t *)outputs[2].buf, height, width,
-                 box_conf_threshold, nms_threshold, scale_w, scale_h, out_zps, out_scales, &detect_result_group);
+                 box_conf_threshold, nms_threshold, out_zps, out_scales, &detect_result_group);
 
     // Draw Objects
     char text[256];
@@ -330,10 +338,10 @@ int main(int argc, char **argv)
         int y1 = det_result->box.top;
         int x2 = det_result->box.right;
         int y2 = det_result->box.bottom;
-        rectangle(ori_image, Point(x1,y1), Point(x2,y2), Scalar(255, 0, 0));
-        putText(ori_image, text, Point(x1, y1 - 12), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
+		rectangle(image, Point(x1,y1), Point(x2,y2), Scalar(255, 0, 0));
+		putText(image, text, Point(x1, y1 - 12), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
     }
-    imwrite("./out.bmp", ori_image);
+    imwrite("./out.bmp", image);
     ret = rknn_outputs_release(ctx, io_num.n_output, outputs);
     // release
     ret = rknn_destroy(ctx);

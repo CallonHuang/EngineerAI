@@ -468,9 +468,11 @@ model is NCHW input fmt
 model input height=640, width=640, channel=3
 cols: 1280, rows: 720
 shrink-cols: 640, rows: 640
-once run use 109.131000 ms
-loadLabelName ./model/coco_80_labels_list.txt
-person @ (54 196 1171 713) 0.990266
+once run use 108.045000 ms
+tie @ (220 355 258 496) 0.892997
+person @ (374 161 579 498) 0.957173
+person @ (65 244 499 493) 0.988691
 ```
 
 至此，就完成了 *YOLOv5* 模型在设备上的运行。
+
